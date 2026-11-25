@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DeskTrash: a Trash can on your Mac desktop</title>
+<meta name="description" content="DeskTrash puts a Trash can back on the macOS desktop. Drop files on it, double-click to open, right-click to empty.">
+<style>
+  :root {
+    --ink: #111;
+    --paper: #fff;
+    --desk-a: #b9bcc4;
+    --desk-b: #a3a7b1;
+    --accent: #2a4bd7;
+    --ui: "Charcoal", "Chicago", "Geneva", system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    font: 16px/1.55 system-ui, -apple-system, "Segoe UI", sans-serif;
+    color: var(--ink);
+    background-color: var(--desk-a);
+    background-image:
+      linear-gradient(45deg, var(--desk-b) 25%, transparent 25%, transparent 75%, var(--desk-b) 75%),
+      linear-gradient(45deg, var(--desk-b) 25%, transparent 25%, transparent 75%, var(--desk-b) 75%);
+    background-size: 4px 4px;
+    background-position: 0 0, 2px 2px;
+  }
+  a { color: var(--accent); }
+
+  /* Menu bar */
+  .menubar {
+    position: sticky; top: 0; z-index: 10;
+    display: flex; gap: 4px; align-items: center;
+    padding: 0 12px; height: 30px;
+    background: var(--paper);
+    border-bottom: 1px solid var(--ink);
+    font: 700 14px/1 var(--ui);
+  }
+  .menubar a {
+    color: var(--ink); text-decoration: none;
+    padding: 7px 10px;
+  }
+  .menubar a:hover, .menubar a:focus-visible { background: var(--ink); color: var(--paper); outline: none; }
+  .menubar .brand { margin-right: 8px; }
+
+  main { max-width: 920px; margin: 0 auto; padding: 36px 16px 20px; }
+
+  /* Classic window */
+  .window {
+    background: var(--paper);
+    border: 1px solid var(--ink);
+    box-shadow: 2px 2px 0 var(--ink);
+    margin-bottom: 36px;
+  }
+  .titlebar {
+    position: relative;
+    height: 24px;
+    border-bottom: 1px solid var(--ink);
+    background: repeating-linear-gradient(to bottom, var(--paper) 0 1px, var(--ink) 1px 2px, var(--paper) 2px 3px) content-box;
+    padding: 5px 6px;
+    text-align: center;
+  }
+  .titlebar::before {
+    content: ""; position: absolute; left: 10px; top: 5px;
+    width: 13px; height: 13px;
+    background: var(--paper); border: 1px solid var(--ink);
+    box-shadow: 0 0 0 2px var(--paper);
+  }
+  .titlebar span {
+    position: relative; top: -5px;
+    display: inline-block; padding: 0 10px;
+    background: var(--paper);
+    font: 700 14px/24px var(--ui);
+  }
+  .content { padding: 28px; }
+
+  h1 { font: 700 clamp(30px, 5vw, 46px)/1.1 var(--ui); margin: 0 0 14px; letter-spacing: -0.5px; }
+  h2 { font: 700 18px/1.3 var(--ui); margin: 0 0 6px; }
+  .lead { font-size: 19px; max-width: 34em; margin: 0 0 22px; }
+  .meta { font-size: 14px; color: #555; margin: 14px 0 0; }
+
+  .buttons { display: flex; flex-wrap: wrap; gap: 12px; }
+  .button {
+    display: inline-block;
+    font: 700 16px/1 var(--ui);
+    color: var(--ink); text-decoration: none;
+    padding: 11px 22px;
+    background: var(--paper);
+    border: 1px solid var(--ink); border-radius: 8px;
+  }
+  .button.default { box-shadow: 0 0 0 2px var(--paper), 0 0 0 4px var(--ink); margin: 4px; }
+  .button:hover, .button:focus-visible { background: var(--ink); color: var(--paper); outline: none; }
+
+  figure { margin: 0; }
+  .shot {
+    display: block; width: 100%; height: auto;
+    border: 1px solid var(--ink);
+    background: #e9e9ee;
+  }
+  .hero-shot { margin-top: 28px; }
+  figcaption { font-size: 14px; color: #444; margin-top: 8px; }
+
+  .missing {
+    display: grid; place-items: center;
+    aspect-ratio: 16 / 10;
+    border: 1px dashed var(--ink);
+    background: #f1f1f4;
+    font: 13px/1.3 ui-monospace, Menlo, monospace; color: #555;
+    text-align: center; padding: 12px;
+  }
+
+  .features { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 28px; }
+  .features p { margin: 0 0 14px; }
+
+  ol.steps { margin: 0; padding-left: 22px; }
+  ol.steps li { margin-bottom: 8px; }
+  kbd {
+    font: 13px/1 ui-monospace, Menlo, monospace;
+    border: 1px solid var(--ink); border-radius: 4px;
+    padding: 2px 6px; background: #f4f4f6;
+  }
+
+  footer { max-width: 920px; margin: 0 auto; padding: 0 16px 40px; font-size: 13px; color: #222; text-align: center; }
+  footer a { color: var(--ink); }
+
+  @media (max-width: 520px) {
+    .content { padding: 20px; }
+    .menubar a:not(.brand) { padding: 7px 6px; }
+  }
+</style>
+</head>
+<body>
+
+<nav class="menubar" aria-label="Site">
+  <a class="brand" href="#top">DeskTrash</a>
+  <a href="#features">Features</a>
+  <a href="#install">Install</a>
+  <a href="https://github.com/gasova/DeskTrash">Source</a>
+</nav>
+
+<main id="top">
+
+  <section class="window" aria-labelledby="hero-title">
+    <div class="titlebar"><span>DeskTrash</span></div>
+    <div class="content">
+      <h1 id="hero-title">The Trash, back on the desktop.</h1>
+      <p class="lead">Before Mac OS X, the Trash lived in the corner of your desktop. DeskTrash puts it back: a small native app that is useless, and therefore essential.</p>
+      <div class="buttons">
+        <a class="button default" href="https://github.com/gasova/DeskTrash/releases/latest">Download</a>
+        <a class="button" href="https://github.com/gasova/DeskTrash">View source</a>
+      </div>
+      <p class="meta">Free. macOS 13 or later, Apple Silicon and Intel.</p>
+
+      <figure class="hero-shot">
+        <img class="shot" src="screenshots/desktop.png" alt="A Mac desktop with the DeskTrash icon in the bottom right corner" width="1600" height="1000">
+      </figure>
+    </div>
+  </section>
+
+  <section class="window" id="features" aria-labelledby="features-title">
+    <div class="titlebar"><span id="features-title">Features</span></div>
+    <div class="content features">
+      <article>
+        <h2>Drop to trash</h2>
+        <p>Drag files or folders onto the icon. Finder does the work, so Put Back and external drives behave as usual.</p>
+        <figure>
+          <video class="shot" src="screenshots/drop.mp4" aria-label="A file being dragged onto the DeskTrash icon" width="800" height="500" autoplay loop muted playsinline></video>
+        </figure>
+      </article>
+      <article>
+        <h2>Empty and full</h2>
+        <p>The icon is the system Trash icon, and it fills up and empties on its own as the Trash changes.</p>
+        <figure>
+          <img class="shot" src="screenshots/full.png" alt="The DeskTrash icon showing a full Trash" width="800" height="500" loading="lazy">
+        </figure>
+      </article>
+      <article>
+        <h2>Right-click menu</h2>
+        <p>Open the Trash, empty it, or start DeskTrash at login. Drag the icon anywhere and it stays there.</p>
+        <figure>
+          <img class="shot" src="screenshots/menu.png" alt="The DeskTrash context menu with Open, Empty Trash, Launch at Login and Quit" width="800" height="500" loading="lazy">
+        </figure>
+      </article>
+    </div>
+  </section>
+
+  <section class="window" id="install" aria-labelledby="install-title">
+    <div class="titlebar"><span id="install-title">Install</span></div>
+    <div class="content">
+      <ol class="steps">
+        <li><a href="https://github.com/gasova/DeskTrash/releases/latest">Download the latest DMG</a> and open it.</li>
+        <li>Drag <strong>DeskTrash</strong> to the <strong>Applications</strong> folder.</li>
+        <li>Open DeskTrash. The Trash appears in the bottom right corner of the desktop.</li>
+        <li>When macOS asks whether DeskTrash may control Finder, choose <strong>Allow</strong>.</li>
+        <li>Right-click the icon and choose <strong>Launch at Login</strong> to keep it around.</li>
+      </ol>
+      <p class="meta">The Trash in the Dock stays where it is; macOS does not allow removing it. DeskTrash has no Dock icon of its own. Quit it from the right-click menu.</p>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <p>Made by <a href="https://github.com/gasova">gasova</a>. DeskTrash is an independent project and is not affiliated with Apple. Mac, macOS and Finder are trademarks of Apple Inc.</p>
+</footer>
+
+<script>
+  // Until a screenshot file exists, show which file belongs in its place.
+  document.querySelectorAll('.shot').forEach(function (el) {
+    function swap() {
+      var box = document.createElement('div');
+      box.className = 'missing';
+      box.textContent = 'Add ' + el.getAttribute('src');
+      el.replaceWith(box);
+    }
+    var failed = el.tagName === 'VIDEO'
+      ? !!el.error
+      : (el.complete && el.naturalWidth === 0);
+    if (failed) { swap(); } else { el.addEventListener('error', swap); }
+  });
+</script>
+</body>
+</html>
